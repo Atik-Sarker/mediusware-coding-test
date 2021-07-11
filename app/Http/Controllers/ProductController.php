@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\ProductVariantPrice;
 use App\Models\Variant;
 use Illuminate\Http\Request;
+use Intervention\Image\Facades\Image;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
@@ -17,7 +20,12 @@ class ProductController extends Controller
      */
     public function index()
     {
-        return view('products.index');
+        $products = DB::table('products as p')->select('p.id','p.title','p.sku','p.description','p.created_at','pvp.price','pvp.stock', 'pv.variant')
+            ->join('product_variants as pv', 'pv.product_id', 'p.id')
+            ->join('product_variant_prices as pvp', 'pvp.product_id', 'p.id')
+            ->get();
+//        dd($products);
+        return view('products.index', compact('products'));
     }
 
     /**
@@ -39,6 +47,32 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
+        $data = $request->all();
+
+        return  $data;
+//            'title' => 'nullable', 'string',
+//            'sku' => ['nullable', 'string'],
+//            'description' => ['nullable', 'string'],
+//            'product_image' => ['nullable', 'image'],
+//            'product_variant_prices' => ['nullable', 'string'],
+//            'product_variant' => ['nullable', 'string']
+//        ]);
+
+        $product = new Product();
+        $product->title = $data['title'];
+        $product->sku = $data['sku'];
+        $product->description = $data['description'];
+        $product->save();
+
+
+
+        if ($request->product_image){
+         $path = $request->product_image->store('Product');
+            DB::table('product_images')->insert([
+                'file_path' => $path,
+                'product_id' =>$product->id,
+            ]);
+        }
 
     }
 
