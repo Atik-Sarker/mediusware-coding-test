@@ -24,7 +24,6 @@ class ProductController extends Controller
             ->join('product_variants as pv', 'pv.product_id', 'p.id')
             ->join('product_variant_prices as pvp', 'pvp.product_id', 'p.id')
             ->get();
-//        dd($products);
         return view('products.index', compact('products'));
     }
 
@@ -47,22 +46,41 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->all();
+//        $data = $request->all();
 
-        return  $data;
-//            'title' => 'nullable', 'string',
-//            'sku' => ['nullable', 'string'],
-//            'description' => ['nullable', 'string'],
-//            'product_image' => ['nullable', 'image'],
-//            'product_variant_prices' => ['nullable', 'string'],
-//            'product_variant' => ['nullable', 'string']
-//        ]);
+     $data = $request->validate([
+            'title' => 'nullable', 'string',
+            'sku' => ['nullable', 'string'],
+            'description' => ['nullable', 'string'],
+            'product_image' => ['nullable'],
+            'product_variant_prices' => ['nullable',],
+            'product_variant' => ['nullable',]
+        ]);
 
         $product = new Product();
         $product->title = $data['title'];
         $product->sku = $data['sku'];
         $product->description = $data['description'];
         $product->save();
+        foreach($data['product_variant'] as $variants){
+            $ProductVariants = new ProductVariant();
+            $ProductVariants->variant_id = $variants['option'];
+            foreach ($variants['tags'] as $key=>$tag){
+                $ProductVariants->variant = $tag;
+                $ProductVariants->product_id = $product->id;
+                $ProductVariants->save();
+            }
+        }
+        $ProductVariantPrice = new ProductVariantPrice();
+        foreach($data['product_variant_prices'] as $p_variant_price){
+            $ProductVariantPrice->product_variant_one = 1;
+            $ProductVariantPrice->product_variant_two = 2;
+            $ProductVariantPrice->product_variant_three = 3;
+            $ProductVariantPrice->price = $p_variant_price['price'];
+            $ProductVariantPrice->stock = $p_variant_price['stock'];
+            $ProductVariantPrice->product_id = $product->id;
+            $ProductVariantPrice->save();
+        }
 
 
 
