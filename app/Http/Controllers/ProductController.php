@@ -46,52 +46,66 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-//        $data = $request->all();
-
      $data = $request->validate([
-            'title' => 'nullable', 'string',
+            'title' => ['nullable', 'string'],
             'sku' => ['nullable', 'string'],
             'description' => ['nullable', 'string'],
             'product_image' => ['nullable'],
             'product_variant_prices' => ['nullable',],
             'product_variant' => ['nullable',]
         ]);
-
         $product = new Product();
         $product->title = $data['title'];
         $product->sku = $data['sku'];
         $product->description = $data['description'];
         $product->save();
+        $variants_arr = array();
         foreach($data['product_variant'] as $variants){
-            $ProductVariants = new ProductVariant();
-            $ProductVariants->variant_id = $variants['option'];
-            foreach ($variants['tags'] as $key=>$tag){
+            foreach ($variants['tags'] as $tag){
+                $ProductVariants = new ProductVariant();
+                $ProductVariants->variant_id = $variants['option'];
                 $ProductVariants->variant = $tag;
                 $ProductVariants->product_id = $product->id;
                 $ProductVariants->save();
+               $variants_arr[$ProductVariants->id] = $tag;
             }
         }
-        $ProductVariantPrice = new ProductVariantPrice();
         foreach($data['product_variant_prices'] as $p_variant_price){
-            $ProductVariantPrice->product_variant_one = 1;
-            $ProductVariantPrice->product_variant_two = 2;
-            $ProductVariantPrice->product_variant_three = 3;
-            $ProductVariantPrice->price = $p_variant_price['price'];
-            $ProductVariantPrice->stock = $p_variant_price['stock'];
-            $ProductVariantPrice->product_id = $product->id;
-            $ProductVariantPrice->save();
+            $product_variant_price = new ProductVariantPrice();
+            $product_variant_price->product_variant_one = $this->ProductVariant($variants_arr,$p_variant_price['title'],'0')??null;
+            $product_variant_price->product_variant_two = $this->ProductVariant($variants_arr,$p_variant_price['title'],'1')??null;;
+            $product_variant_price->product_variant_three = $this->ProductVariant($variants_arr,$p_variant_price['title'],'2')??null;;
+            $product_variant_price->price = $p_variant_price['price'];
+            $product_variant_price->stock = $p_variant_price['stock'];
+            $product_variant_price->product_id = $product->id;
+            $product_variant_price->save();
         }
-
-
 
         if ($request->product_image){
-         $path = $request->product_image->store('Product');
-            DB::table('product_images')->insert([
-                'file_path' => $path,
-                'product_id' =>$product->id,
-            ]);
+            $product_image = new ProductImage();
+            $path = $request->product_image->store('Product');
+            $product_image->file_path = $path;
+            $product_image->product_id =$product->id;
         }
 
+        return response()->json(['message' => 'product create successfully'], 200);
+
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     **param
+     * all product variant: $data[] , single product_variant: $title, product_variant: $index
+     **return
+     * product_variant id
+     */
+    public function ProductVariant($data = [],$title = '', $index = ''){
+        if ($title != '' and $index != ''){
+            $ids = explode('/', $title);
+            return array_search($ids[$index], $data);
+        }
+        return null;
     }
 
 
